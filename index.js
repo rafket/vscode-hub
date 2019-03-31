@@ -11,8 +11,7 @@ var httpProxy = require("http-proxy"),
     passport = require("passport"),
     GithubStrategy = require("passport-github").Strategy;
 
-var credentials = {},
-    containers = {},
+var containers = {},
     tokens = {},
     last_access = {},
     settings = require("./settings.json"),
@@ -118,22 +117,17 @@ app.get("/auth/github/callback",
 	    res.redirect("/deny");
 	    return;
 	}
-	if (req.user.id in tokens && tokens[req.user.id]) {
+	if (req.user.id in tokens && tokens[req.user.id] in containers) {
 	    var token = tokens[req.user.id];
-	    var path = credentials[token];
-	    var container = containers[path];
-            delete credentials[token];
-	    delete containers[path];
+	    var container = containers[token];
+	    delete containers[token];
 	    removeContainer(container, function() {});
 	}
 	reapContainers();
 
 	var token = crypto.randomBytes(15).toString("hex");
-	var path = crypto.randomBytes(5).toString("hex");
 	tokens[req.user.id] = token;
-	credentials[token] = path;
 	docker.run("code-server", ["--allow-http", "--no-auth"], undefined, { 
-	    "name": path,
 	    "Hostconfig": {
 		"Memory": settings.max_memory,
 		"DiskQuota": settings.disk_quota,
@@ -142,7 +136,7 @@ app.get("/auth/github/callback",
 	}, function(err, data, container) {
 	    console.log(err);
 	}).on('container', function(container) {
-	    containers[path] = container;
+	    containers[token] = container;
 	    getIP(container, function(ip) {
 		waitForConn(ip, 8443, function() {
 		    ipaddr[token] = ip+":8443";
@@ -161,7 +155,8 @@ app.get("/*",
 	if (req.user && settings.whitelist.indexOf(req.user.id) > -1) {
 	    res.redirect("/deny");
 	}
-	else if (req.user && req.user.id in tokens) {
+	else if (req.user && req.user.id in tokens && tokens[req.user.id] in containers) {
+	    last_access[tokens[req.user.id]] = (new Date()).getTime();
 	    proxy.web(req, res, { target: "http://"+ipaddr[tokens[req.user.id]]});
 	}
 	else {
@@ -171,9 +166,9 @@ app.get("/*",
 
 
 function exitHandler() {
-    for (var path in containers) {
-	var container = containers[path];
-	delete containers[path];
+    for (var token in containers) {
+	var container = containers[token];
+	delete containers[token];
 	removeContainer(container, function() {
 	    exitHandler();
 	});
@@ -185,11 +180,11 @@ function exitHandler() {
 
 function reapContainers() {
     var timestamp = (new Date()).getTime();
-    for (var path in containers) {
-	if (timestamp - last_access[path] > settings.time_out) {
-	    var container = containers[path];
-	    //proxy.removeRoute(path);
-	    delete containers[path];
+    for (var token in containers) {
+	if (timestamp - last_access[token] > settings.time_out) {
+            console.log(token, "has timed out");
+	    var container = containers[token];
+	    delete containers[token];
 
 	    removeContainer(container, function() {
 		reapContainers();
@@ -208,6 +203,7 @@ var server = http.createServer(app);
 server.on("upgrade", function(req, socket, head) {
     sessionParser(req, {}, () => {
 	var userid = req.session.passport.user.id;
+        last_access[tokens[userid]] = (new Date()).getTime();
 	proxy.ws(req, socket, head, {target: "ws://"+ipaddr[tokens[userid]]});
     });
 });
