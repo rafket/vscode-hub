@@ -15,7 +15,8 @@ var containers = {},
     tokens = {},
     last_access = {},
     settings = require("./settings.json"),
-    ipaddr = {};
+    ipaddr = {},
+    users = {};
 
 var proxy = httpProxy.createProxyServer({});
 
@@ -37,11 +38,12 @@ passport.use(new GithubStrategy({
 ));
 
 passport.serializeUser(function(user, cb) {
-    cb(null, user);
+    users[user.id] = user;
+    cb(null, user.id);
 });
 
 passport.deserializeUser(function(obj, cb) {
-    cb(null, obj);
+    cb(null, users[obj]);
 });
 
 var app = express();
@@ -202,8 +204,8 @@ var server = http.createServer(app);
 
 server.on("upgrade", function(req, socket, head) {
     sessionParser(req, {}, () => {
-	var userid = req.session.passport.user.id;
-        last_access[tokens[userid]] = (new Date()).getTime();
+	var userid = req.session.passport.user;
+	last_access[tokens[userid]] = (new Date()).getTime();
 	proxy.ws(req, socket, head, {target: "ws://"+ipaddr[tokens[userid]]});
     });
 });
