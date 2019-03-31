@@ -1,0 +1,16 @@
+{
+  "name": "@rafket/vscode-hub",
+  "repository": "https://github.com/rafket/vscode-hub",
+  "description": "codercom/code-server docker containers on demand (with authentication)",
+  "dependencies": {
+    "configurable-http-proxy": "*",
+    "express": "*",
+    "cookie-parser": "*",
+    "body-parser": "*",
+    "dockerode": "*",
+    "passport": "*",
+    "passport-github": "*",
+    "ejs": "*"
+  },
+  "license": "MIT"
+}
