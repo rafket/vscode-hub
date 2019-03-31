@@ -18,8 +18,7 @@
 * `whitelist`: List of github user IDs that are allowed to log in
 * `max_memory`: Maximum memory (in bytes) allowed per container. Recommended minimum at 1GB. It seems that it is still functional at 300MB (and using 50MB except during startup), though the Extensions host is not running, and syntax highlighting sometimes doesn't work.
 * `disk_quota`: Maximum disk usage (in bytes) allowed per container.
-* `express_port`: Port bound to expressjs.
-* `proxy_port`: Port bound to the proxy (the port that users will access).
+* `port`: Port that the service will run on.
 * `callback_url`: Callback URL for Github Oauth.
 * `time_out`: Time (in ms) after which an inactive container is killed.
 * `github_clientid`: Github ClientID for Oauth.

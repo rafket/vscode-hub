@@ -1,8 +1,9 @@
 "use strict";
 
-var confProxy = require("configurable-http-proxy"),
+var httpProxy = require("http-proxy"),
     express = require("express"),
     cookieParser = require("cookie-parser"),
+    expressSession = require("express-session"),
     bodyParser = require("body-parser"),
     Docker = require("dockerode"),
     crypto = require("crypto"),
@@ -14,27 +15,15 @@ var credentials = {},
     containers = {},
     tokens = {},
     last_access = {},
-    settings = require("./settings.json");
+    settings = require("./settings.json"),
+    ipaddr = {};
 
-var proxy = new confProxy.ConfigurableProxy({"includePrefix": false});
+var proxy = httpProxy.createProxyServer({});
 
-proxy.updateLastActivity = function(prefix) {
-    var timer = this.statsd.createTimer("last_activity_updating");
-    var routes = this._routes;
-
-    last_access[prefix.substr(1)] = (new Date()).getTime();
-
-    return routes
-	.get(prefix)
-	.then(function(result) {
-	    if (result) {
-		return routes.update(prefix, { last_activity: new Date() });
-	    }
-	})
-	.then(timer.stop);
-}
-
-proxy.proxyServer.listen(settings.proxy_port, "0.0.0.0");
+proxy.on("error", function (error, req, res) {
+    console.log(error);
+    res.end();
+});
 
 var docker = new Docker({socketPath: '/var/run/docker.sock'});
 
@@ -62,7 +51,9 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
 app.use(cookieParser());
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+const sessionParser = expressSession({ secret: 'keyboard cat', resave: true, saveUninitialized: true });
+app.use(sessionParser);
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -130,8 +121,8 @@ app.get("/auth/github/callback",
 	if (req.user.id in tokens && tokens[req.user.id]) {
 	    var token = tokens[req.user.id];
 	    var path = credentials[token];
-	    proxy.removeRoute(path);
 	    var container = containers[path];
+            delete credentials[token];
 	    delete containers[path];
 	    removeContainer(container, function() {});
 	}
@@ -141,7 +132,7 @@ app.get("/auth/github/callback",
 	var path = crypto.randomBytes(5).toString("hex");
 	tokens[req.user.id] = token;
 	credentials[token] = path;
-	docker.run("code-server", ["--allow-http", "--password", token], undefined, { 
+	docker.run("code-server", ["--allow-http", "--no-auth"], undefined, { 
 	    "name": path,
 	    "Hostconfig": {
 		"Memory": settings.max_memory,
@@ -154,9 +145,8 @@ app.get("/auth/github/callback",
 	    containers[path] = container;
 	    getIP(container, function(ip) {
 		waitForConn(ip, 8443, function() {
-		    var addr = "http://"+ip+":8443/";
-		    proxy.addRoute(path, {"target": addr});
-		    res.cookie("password", token).redirect("/"+path);
+		    ipaddr[token] = ip+":8443";
+		    res.redirect("/");
 		});
 	    });
 	});
@@ -166,19 +156,23 @@ app.get("/deny", function(req, res) {
     res.render("deny");
 });
 
-app.get("/*", function(req, res) {
-    if ("password" in req.cookies && req.cookies["password"] in credentials) {
-	res.redirect("/"+credentials[req.cookies["password"]]+req.originalUrl);
-    }
-    else {
-	res.render("login");
-    }
-});
+app.get("/*",
+    function(req, res) {
+	if (req.user && settings.whitelist.indexOf(req.user.id) > -1) {
+	    res.redirect("/deny");
+	}
+	else if (req.user && req.user.id in tokens) {
+	    proxy.web(req, res, { target: "http://"+ipaddr[tokens[req.user.id]]});
+	}
+	else {
+	    res.render("login");
+	}
+    });
+
 
 function exitHandler() {
     for (var path in containers) {
 	var container = containers[path];
-	proxy.removeRoute(path);
 	delete containers[path];
 	removeContainer(container, function() {
 	    exitHandler();
@@ -194,7 +188,7 @@ function reapContainers() {
     for (var path in containers) {
 	if (timestamp - last_access[path] > settings.time_out) {
 	    var container = containers[path];
-	    proxy.removeRoute(path);
+	    //proxy.removeRoute(path);
 	    delete containers[path];
 
 	    removeContainer(container, function() {
@@ -209,7 +203,15 @@ function reapContainers() {
 process.on('exit', exitHandler.bind());
 process.on('SIGINT', exitHandler.bind());
 
+var server = http.createServer(app);
+
+server.on("upgrade", function(req, socket, head) {
+    sessionParser(req, {}, () => {
+	var userid = req.session.passport.user.id;
+	proxy.ws(req, socket, head, {target: "ws://"+ipaddr[tokens[userid]]});
+    });
+});
+
 buildImage(function() {
-    var server = app.listen(settings.express_port, function() {});
-    proxy.addRoute("/", {"target": "http://0.0.0.0:" + settings.express_port});
+    server.listen(settings.port);
 });
