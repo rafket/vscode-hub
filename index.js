@@ -52,7 +52,7 @@ app.set('view engine', 'ejs');
 
 app.use(cookieParser());
 app.use(bodyParser.json());
-const sessionParser = expressSession({ secret: 'keyboard cat', resave: true, saveUninitialized: true });
+const sessionParser = expressSession({ secret: crypto.randomBytes(10).toString("hex"), resave: true, saveUninitialized: true});
 app.use(sessionParser);
 app.use(passport.initialize());
 app.use(passport.session());
