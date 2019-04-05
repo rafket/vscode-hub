@@ -1,0 +1,43 @@
+html {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    font-family: helvetica, sans-serif, arial;
+    font-size: 1em;
+    color: #111;
+    padding: 0;
+    margin: 0;
+}
+
+h1 {
+    text-align: center;
+}
+
+#terminal-container {
+    margin: 0 auto;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+.container {
+    position: fixed;
+}
+
+p {
+    font-size: 0.9em;
+    font-style: italic
+}
+
+#option-container {
+    display: flex;
+    justify-content: center;
+}
+
+.option-group {
+    display: inline-block;
+    padding-left: 20px;
+    vertical-align: top;
+}

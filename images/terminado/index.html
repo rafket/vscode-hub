@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/dist/xterm.css" />
+    <link rel="stylesheet" href="/dist/addons/fullscreen/fullscreen.css" />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/dist/xterm.js"></script>
+    <script src="/dist/addons/terminado/terminado.js"></script>
+    <script src="/dist/addons/fullscreen/fullscreen.js"></script>
+    <script src="/dist/addons/fit/fit.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div id="terminal-container"></div>
+    </div>
+    <script>
+      terminado.apply(Terminal);
+      fit.apply(Terminal);
+      fullscreen.apply(Terminal);
+
+      var term = new Terminal(),
+          protocol = 'ws://',
+          socketURL = protocol + location.hostname + ((location.port) ? (':' + location.port) : '') + "/websocket";
+          sock = new WebSocket(socketURL);
+
+      sock.addEventListener('open', function () {
+        term.terminadoAttach(sock);
+      });
+
+      term.open(document.getElementById('terminal-container'));
+      term.toggleFullScreen(true);
+      term.fit();
+      window.onresize = function() {
+        term.fit();
+      };
+    </script>
+  </body>
+</html>

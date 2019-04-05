@@ -13,6 +13,12 @@
       "path": "./images/theia",
       "max_memory": 209715200,
       "disk_quota": 1073741824
+    },
+    "terminado-hub": {
+      "port": 8010,
+      "path": "./images/terminado",
+      "max_memory": 52428800,
+      "disk_quota": 1073741824
     }
   },
   "user_image": {
