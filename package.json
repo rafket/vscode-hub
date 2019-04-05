@@ -3,15 +3,16 @@
   "repository": "https://github.com/rafket/vscode-hub",
   "description": "codercom/code-server docker containers on demand (with authentication)",
   "dependencies": {
-    "http-proxy": "1.17.0",
-    "express": "4.16.4",
-    "cookie-parser": "1.4.4",
-    "express-session": "1.15.6",
     "body-parser": "1.18.3",
+    "cookie-parser": "1.4.4",
     "dockerode": "2.5.8",
+    "ejs": "2.6.1",
+    "express": "4.16.4",
+    "express-session": "1.15.6",
+    "http-proxy": "1.17.0",
     "passport": "0.4.0",
     "passport-github": "1.1.0",
-    "ejs": "2.6.1"
+    "web-terminal": "^0.7.0"
   },
   "license": "MIT"
 }

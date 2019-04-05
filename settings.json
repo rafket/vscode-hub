@@ -1,9 +1,24 @@
 {
-  "whitelist": [ ],
-  "max_memory": 1073741824,
-  "disk_quota": 1073741824,
-  "port": 8080,
-  "callback_url": "http://127.0.0.1:8080/auth/github/callback",
+  "whitelist": [ 2016568 ],
+  "port": 80,
+  "images": {
+    "vscode-hub": {
+      "port": 8443,
+      "path": "./images/vscode",
+      "max_memory": 1073741824,
+      "disk_quota": 1073741824
+    },
+    "theia-hub": {
+      "port": 3000,
+      "path": "./images/theia",
+      "max_memory": 209715200,
+      "disk_quota": 1073741824
+    }
+  },
+  "user_image": {
+    "2016568": "theia-hub"
+  },
+  "callback_url": "http://localhost:80/auth/github/callback",
   "time_out": 2000000,
   "github_clientid": "",
   "github_clientsecret": ""

@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "dependencies": {
+    "@theia/core": "next",
+    "@theia/editor": "next",
+    "@theia/monaco": "next",
+    "@theia/languages": "next",
+    "@theia/navigator": "next",
+    "@theia/terminal": "next",
+    "@theia/workspace": "next",
+    "@theia/process": "next",
+    "@theia/filesystem": "next",
+    "@theia/typescript": "next",
+    "@theia/preferences": "next",
+    "@theia/textmate-grammars": "next",
+    "@theia/cpp": "next"
+  },
+  "name": "theia-olga",
+  "devDependencies": {
+    "@theia/cli": "next"
+  }
+}

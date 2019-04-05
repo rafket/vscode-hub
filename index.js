@@ -9,7 +9,8 @@ var httpProxy = require("http-proxy"),
     crypto = require("crypto"),
     http = require("http"),
     passport = require("passport"),
-    GithubStrategy = require("passport-github").Strategy;
+    GithubStrategy = require("passport-github").Strategy,
+    fs = require('fs');
 
 var containers = {},
     tokens = {},
@@ -78,16 +79,21 @@ function waitForConn(addr, port, callback) {
     });
 }
 
-function buildImage(callback) {
-    console.log("Building image...");
-    docker.buildImage({context: __dirname, src: ['Dockerfile']}, { t: "code-server:latest" }, function(err, response) {
+function buildImage(image_name, callback) {
+    console.log("Building image", image_name);
+    docker.buildImage({context: settings.images[image_name].path}, { t: image_name }, function(err, response) {
 	if (err) {
 	    console.log(err);
 	}
 	else {
 	    docker.modem.followProgress(response, function onFinished(err, response) {
-		console.log("Building image: DONE");
-		callback();
+		if (err) {
+		    console.log(err);
+		}
+		else {
+		    console.log("Building image: DONE");
+		    callback();
+		}
 	    });
 	}
     });
@@ -129,19 +135,27 @@ app.get("/auth/github/callback",
 
 	var token = crypto.randomBytes(15).toString("hex");
 	tokens[req.user.id] = token;
-	docker.run("code-server", ["--allow-http", "--no-auth"], undefined, { 
+	var image_name = settings.user_image[req.user.id];
+
+	try {
+	    fs.mkdirSync(__dirname+"/users/"+req.user.id, { recursive: true })
+	} catch (err) {
+	    if (err.code !== 'EEXIST') throw err
+	}
+
+	docker.run(image_name, [], undefined, { 
 	    "Hostconfig": {
-		"Memory": settings.max_memory,
-		"DiskQuota": settings.disk_quota,
-		"Binds": [__dirname+"/users/"+req.user.id+":/root/project"]
+		"Memory": settings.images[image_name].max_memory,
+		"DiskQuota": settings.images[image_name].disk_quota,
+		"Binds": [__dirname+"/users/"+req.user.id+":/home/project"]
 	    }
 	}, function(err, data, container) {
 	    console.log(err);
 	}).on('container', function(container) {
 	    containers[token] = container;
 	    getIP(container, function(ip) {
-		waitForConn(ip, 8443, function() {
-		    ipaddr[token] = ip+":8443";
+		waitForConn(ip, settings.images[image_name].port, function() {
+		    ipaddr[token] = ip+":"+settings.images[image_name].port;
 		    res.redirect("/");
 		});
 	    });
@@ -184,7 +198,7 @@ function reapContainers() {
     var timestamp = (new Date()).getTime();
     for (var token in containers) {
 	if (timestamp - last_access[token] > settings.time_out) {
-            console.log(token, "has timed out");
+	    console.log(token, "has timed out");
 	    var container = containers[token];
 	    delete containers[token];
 
@@ -210,6 +224,10 @@ server.on("upgrade", function(req, socket, head) {
     });
 });
 
-buildImage(function() {
-    server.listen(settings.port);
+server.on("error", err=>console.log(err));
+
+buildImage("vscode-hub", function() {
+    buildImage("theia-hub", function() {
+	server.listen(settings.port);
+    });
 });
