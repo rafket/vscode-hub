@@ -1,5 +1,5 @@
 FROM node:8-alpine
-RUN apk add --no-cache make gcc g++ python
+RUN apk add --no-cache make gcc g++ python xorg-server
 WORKDIR /home/user
 ADD ./package.json ./package.json
 RUN yarn --pure-lockfile && \
