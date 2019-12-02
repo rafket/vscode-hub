@@ -243,3 +243,5 @@ buildImage("vscode-hub", function() {
         });
     });
 });
+
+setInterval(reapContainers, settings.time_out);
