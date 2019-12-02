@@ -226,8 +226,11 @@ server.on("upgrade", function(req, socket, head) {
         if (req.session.passport) {
             var userid = req.session.passport.user;
             last_access[tokens[userid]] = (new Date()).getTime();
-            proxy.ws(req, socket, head, {target: "ws://"+ipaddr[tokens[userid]]});
-        }
+	    proxy.ws(req, socket, head, {target: "ws://"+ipaddr[tokens[userid]]});
+	    socket.on("data", function() {
+		last_access[tokens[userid]] = (new Date()).getTime();
+	    });
+	}
     });
 });
 
